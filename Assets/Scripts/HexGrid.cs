@@ -7,8 +7,8 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 	private HexCell[] cells;
 
 	public HexCell cellSelected;
-	public readonly int width = 6;
-	public readonly int height = 6;
+	public readonly int width = 8;
+	public readonly int height = 8;
 	public int moveRangeWidth = 0;
 	public HexCell cellPrefab;
 	public event EventHandler<SelectCellEventArgs> SelectCell;
@@ -133,7 +133,15 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 		getCellByCubeCoordinates (start.X, start.Y).changeState (cellState);
 	}
 
-	public void switchRangeState(int rangeWidth, HexCell.CellState cellState) {
+	public void showMoveRange(int rangeWidth) {
+		switchRangeState (rangeWidth, HexCell.CellState.StateMoveRange);
+	}
+
+	public void hideMoveRange(int rangeWidth) {
+		switchRangeState (rangeWidth, HexCell.CellState.StateDefault);
+	}
+
+	void switchRangeState(int rangeWidth, HexCell.CellState cellState) {
 		// Set up range of moving state
 		HexCoordinates coordinates = this.cellSelected.coordinates;
 		for (int x = coordinates.X - rangeWidth; x <= coordinates.X + rangeWidth; x++) {
@@ -159,6 +167,34 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 
 		// todo: Set up range of attacking
 	}
+
+	List<HexCell> findCellsWithOwner() {
+		List<HexCell> result = new List<HexCell>();
+
+		foreach (var cell in this.cells) {
+			if (cell.owner != null)
+				result.Add (cell);
+		}
+		return result;
+	}
+
+	public void disableCellWithOwner() {
+		List<HexCell> cells = findCellsWithOwner ();
+
+		foreach (var cell in cells) {
+			cell.disableCell ();
+		}
+	}
+
+	public void enableCellWithOwner() {
+		List<HexCell> cells = findCellsWithOwner ();
+
+		foreach (var cell in cells) {
+			cell.enableCell ();
+		}
+	}
+
+	// Events
 
 	public class SelectCellEventArgs: EventArgs {
 		public HexCell cell;

@@ -11,6 +11,7 @@ public class Character : MonoBehaviour {
 	public bool isReadyToMove;
 	public int healthPoint;
 	public int attackDamage;
+	public int actionPoint;
 	public double attackWidth;
 	public string characterName;
 	public bool moveable;
@@ -27,6 +28,7 @@ public class Character : MonoBehaviour {
 		this.movingRangeWidth = 2; // Default moving range
 		this.isReadyToMove = false;
 		this.healthPoint = 5;
+		this.actionPoint = 3;
 		this.attackWidth = 1;
 		this.attackDamage = 1;
 		this.characterName = name;
@@ -63,11 +65,13 @@ public class Character : MonoBehaviour {
 		if (e.cell.coordinates.Equals (this.coordinates)) { // The character is right on the cell
 			if (e.cell.state == HexCell.CellState.StateSelected) { // Cell is selected, change to state of being selected
 				this.isReadyToMove = true;
-				this.grid.switchRangeState (this.movingRangeWidth, HexCell.CellState.StateMoveRange); // Show ranges
+				this.grid.disableCellWithOwner ();
+				this.grid.showMoveRange (this.movingRangeWidth); // Show ranges
 				displayUIState ();
 			} else { // Cell is unselected, cancel state of being selected
 				this.isReadyToMove = false;
-				this.grid.switchRangeState (this.movingRangeWidth, HexCell.CellState.StateDefault); // Unshow ranges
+				this.grid.hideMoveRange (this.movingRangeWidth); // Unshow ranges
+				this.grid.enableCellWithOwner ();
 				e.cell.enableCell ();
 				hideUIState ();
 			}
@@ -75,7 +79,8 @@ public class Character : MonoBehaviour {
 			dropTheCell (this.grid.getCellByCubeCoordinates (this.coordinates.X, this.coordinates.Y));
 			moveToCoordinate (e.cell.coordinates.X, e.cell.coordinates.Y); // Move to new coordinate
 			ownTheCell (e.cell);
-			this.grid.switchRangeState (this.movingRangeWidth, HexCell.CellState.StateDefault); // Unshow ranges
+			this.grid.enableCellWithOwner ();
+			this.grid.hideMoveRange (this.movingRangeWidth); // Unshow ranges
 			hideUIState ();
 			this.isReadyToMove = false;
 			e.cell.changeState (HexCell.CellState.StateDefault);
