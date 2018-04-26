@@ -5,10 +5,11 @@ using UnityEngine;
 
 public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 	private HexCell[] cells;
-
+	public HexCoordinates.MapType mapType;
+	public Vector3 transformOffset;
 	public HexCell cellSelected;
-	public readonly int width = 8;
-	public readonly int height = 8;
+	public readonly int width = 9;
+	public readonly int height = 9;
 	public int moveRangeWidth = 0;
 	public HexCell cellPrefab;
 	public event EventHandler<SelectCellEventArgs> SelectCell;
@@ -22,14 +23,49 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 	};
 
 	void Awake() {
+		this.transformOffset = new Vector3 (-(width + 3) * HexMetrics.innerRadius, 
+			-(3 * height / 4) * HexMetrics.outerRadius, this.transform.position.z);
+		this.mapType = HexCoordinates.MapType.Hexagon;
 		cells = new HexCell[height * width];
-		this.transform.position = new Vector3 (- (width - 1) * HexMetrics.innerRadius, 
-			- (3 * height / 4) * HexMetrics.outerRadius, this.transform.position.z); // Adjust position to make the grid look better
+		this.transform.position = this.transformOffset; // Adjust position to make the grid look better
 		for (int y = 0, i = 0; y < height; y++) {
 			for (int x = 0; x < width; x++) {
 				createCell (x, y, i++);
 			}
 		}
+	}
+
+	// Create a basic cell
+	void createCell(int x, int y, int index) {
+		// Set position from offset coordinate
+		Vector3 position = getPositionByCoordinates (x, y);
+
+		// Instantiate cells on scene
+		HexCell cell = cells [index] = Instantiate (cellPrefab, this.transform, false);
+		cell.Initiate ();
+		cell.transform.localPosition = position;
+
+		// Calculate cube coordinate from offset coordinate;
+		cell.coordinates = HexCoordinates.transformOffsetToCube (x, y, this.mapType);
+
+		if (!HexCoordinates.isValid (cell.coordinates.X, cell.coordinates.Y, width, this.mapType)) { // Hide redundants
+			return;
+		}
+		cell.gameObject.SetActive (true);
+
+		// Bind events
+		cell.SelectCell += OnSelectCell;
+		cell.HoverOnCell += OnHoverOnCell;
+		cell.HoverOffCell += OnHoverOffCell;
+	}
+
+	// This coordinates can refer to either offset coordinates or hex coordinates in hexagon map
+	public Vector3 getPositionByCoordinates(int x, int y) {
+		Vector3 position;
+		position.x = (x + y * 0.5f) * (HexMetrics.innerRadius * 2f);
+		position.y = y * (HexMetrics.outerRadius * 1.5f);
+		position.z = 0;
+		return position;
 	}
 
 	public double getCost(ICoordinates startPoint, ICoordinates endPoint) {
@@ -50,46 +86,111 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 		}
 	}
 		
-	// Create a basic cell
-	void createCell(int x, int y, int index) {
-		// Set position from offset coordinate
-		Vector3 position;
-		position.x = (x + y * 0.5f - y / 2) * (HexMetrics.innerRadius * 2f);
-		position.y = y * (HexMetrics.outerRadius * 1.5f);
-		position.z = 0;
-
-		// Instantiate cells on scene
-		HexCell cell = cells [index] = Instantiate (cellPrefab, this.transform, false);
-		cell.Initiate ();
-		cell.transform.localPosition = position;
-
-		// Calculate cube coordinate from offset coordinate;
-		cell.coordinates = HexCoordinates.transformOffsetToCube (x, y);
-		
-		// Bind events
-		cell.SelectCell += tellPlayerCellSelect;
-		cell.HoverOnCell += OnHoverOnCell;
-		cell.HoverOffCell += OnHoverOffCell;
-	}
-
 	public HexCell[] getCells() {
 		return this.cells;
 	}
 
 	private bool isLegalCubeCoordinates(HexCoordinates coordinates) {
-		int offsetIndex = HexCoordinates.transformCubeToOffsetIndex (coordinates.X, coordinates.Y, width);
+		int offsetIndex = HexCoordinates.transformCubeToOffsetIndex (coordinates.X, coordinates.Y, width,
+			this.mapType);
 		return ((offsetIndex < width * height) && (offsetIndex >= 0));
 	}
 
 	public HexCell getCellByCubeCoordinates(int x, int y) {
-		int offsetIndex = HexCoordinates.transformCubeToOffsetIndex (x, y, width);
+		int offsetIndex = HexCoordinates.transformCubeToOffsetIndex (x, y, width,
+			this.mapType);
 		if (offsetIndex >= width * height || offsetIndex < 0) // Illegal index
 			return null;
 		return this.cells [offsetIndex];
 	}
 
+	void drawPath(HexCoordinates start, HexCoordinates goal, HexCell.CellState cellState) {
+		AStarSearch pathSearcher = new AStarSearch (this, start, goal);
+		HexCoordinates node = pathSearcher.cameFrom [goal] as HexCoordinates;
+
+		do {
+			HexCell cell = getCellByCubeCoordinates (node.X, node.Y);
+			cell.changeState (cellState);
+			node = pathSearcher.cameFrom[node] as HexCoordinates;
+		} while (!node.Equals (start));
+		getCellByCubeCoordinates (start.X, start.Y).changeState (cellState);
+	}
+
+	public void showRangeFromSelectedCell(int rangeWidth) {
+		switchRangeState (rangeWidth, HexCell.CellState.StateMoveRange, this.cellSelected.coordinates);
+	}
+
+	public void hideRangeFromSelectedCell(int rangeWidth) {
+		switchRangeState (rangeWidth, HexCell.CellState.StateDefault, this.cellSelected.coordinates);
+	}
+
+	public List<HexCell> getCircleRange(HexCoordinates centerCoordinates, int rangeWidth) {
+		List<HexCell> cells = new List<HexCell> ();
+		for (int x = centerCoordinates.X - rangeWidth; x <= centerCoordinates.X + rangeWidth; x++) {
+			for (int y = centerCoordinates.Y - rangeWidth; y <= centerCoordinates.Y + rangeWidth; y++) {
+				for (int z = centerCoordinates.Z - rangeWidth; z <= centerCoordinates.Z + rangeWidth; z++) {
+					if (x + y + z == 0) {
+						HexCell cell = getCellByCubeCoordinates (x, y);
+						cells.Add (cell);
+					}
+				}
+			}
+		}
+		return cells;
+	}
+
+	void switchRangeState(int rangeWidth, HexCell.CellState cellState, HexCoordinates centerCoordinates) {
+		// Set up range of moving state
+		var cells = getCircleRange (centerCoordinates, rangeWidth);
+		foreach (var cell in cells) {
+			if (cell != null) {
+				if (cell == this.cellSelected && cellState == HexCell.CellState.StateMoveRange) {
+					continue; // Selected cell shouldn't be set to move range state
+				}
+				if (cell.owner == null) { // Check cell's owner
+					cell.changeState (cellState);
+					if (cellState == HexCell.CellState.StateDefault) { // Hide ranges, disable them
+						cell.disableCell ();
+					}
+				}
+			}
+		}
+
+		// todo: Set up range of attacking
+	}
+
+	List<HexCell> findCellsWithOwner() {
+		List<HexCell> result = new List<HexCell>();
+
+		foreach (var cell in this.cells) {
+			if (cell.owner != null)
+				result.Add (cell);
+		}
+		return result;
+	}
+
+	public void disableCellsWithOwner() {
+		List<HexCell> cells = findCellsWithOwner ();
+
+		foreach (var cell in cells) {
+			cell.disableCell ();
+		}
+	}
+
+	public void enableCellsWithMoveableOwner() {
+		List<HexCell> cells = findCellsWithOwner ();
+
+		foreach (var cell in cells) {
+			if (cell.owner.moveable) {
+				cell.enableCell ();
+			}
+		}
+	}
+
+	// Events
+
 	// Show range of moveable cells and tell player to move or not
-	void tellPlayerCellSelect(object sender, EventArgs e) {
+	void OnSelectCell(object sender, EventArgs e) {
 		HexCell cell = sender as HexCell;
 		if (cell.state == HexCell.CellState.StateSelected) {
 			this.cellSelected = cell; // Record selected cell
@@ -120,81 +221,6 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 			drawPath (cellSelected.coordinates, cell.coordinates, HexCell.CellState.StateMoveRange);
 		}
 	}
-
-	void drawPath(HexCoordinates start, HexCoordinates goal, HexCell.CellState cellState) {
-		AStarSearch pathSearcher = new AStarSearch (this, start, goal);
-		HexCoordinates node = pathSearcher.cameFrom [goal] as HexCoordinates;
-
-		do {
-			HexCell cell = getCellByCubeCoordinates (node.X, node.Y);
-			cell.changeState (cellState);
-			node = pathSearcher.cameFrom[node] as HexCoordinates;
-		} while (!node.Equals (start));
-		getCellByCubeCoordinates (start.X, start.Y).changeState (cellState);
-	}
-
-	public void showMoveRange(int rangeWidth) {
-		switchRangeState (rangeWidth, HexCell.CellState.StateMoveRange);
-	}
-
-	public void hideMoveRange(int rangeWidth) {
-		switchRangeState (rangeWidth, HexCell.CellState.StateDefault);
-	}
-
-	void switchRangeState(int rangeWidth, HexCell.CellState cellState) {
-		// Set up range of moving state
-		HexCoordinates coordinates = this.cellSelected.coordinates;
-		for (int x = coordinates.X - rangeWidth; x <= coordinates.X + rangeWidth; x++) {
-			for (int y = coordinates.Y - rangeWidth; y <= coordinates.Y + rangeWidth; y++) {
-				for (int z = coordinates.Z - rangeWidth; z <= coordinates.Z + rangeWidth; z++) {
-					if (x + y + z == 0) {
-						HexCell cell = getCellByCubeCoordinates (x, y);
-						if (cell != null) {
-							if (cell == this.cellSelected && cellState == HexCell.CellState.StateMoveRange) {
-								continue; // Selected cell shouldn't be set to move range state
-							}
-							if (cell.owner == null) { // Check cell's owner
-								cell.changeState (cellState);
-								if (cellState == HexCell.CellState.StateDefault) { // Hide ranges, disable them
-									cell.disableCell ();
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// todo: Set up range of attacking
-	}
-
-	List<HexCell> findCellsWithOwner() {
-		List<HexCell> result = new List<HexCell>();
-
-		foreach (var cell in this.cells) {
-			if (cell.owner != null)
-				result.Add (cell);
-		}
-		return result;
-	}
-
-	public void disableCellWithOwner() {
-		List<HexCell> cells = findCellsWithOwner ();
-
-		foreach (var cell in cells) {
-			cell.disableCell ();
-		}
-	}
-
-	public void enableCellWithOwner() {
-		List<HexCell> cells = findCellsWithOwner ();
-
-		foreach (var cell in cells) {
-			cell.enableCell ();
-		}
-	}
-
-	// Events
 
 	public class SelectCellEventArgs: EventArgs {
 		public HexCell cell;

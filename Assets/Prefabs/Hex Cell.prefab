@@ -28,7 +28,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &4654328934206044
 Transform:
   m_ObjectHideFlags: 1
@@ -83,7 +83,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 93fb73876b90e4cfd8b2b4eb3621dd27, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pressed: 0
   state: 0
   hexagonCyan: {fileID: 21300000, guid: 2a06d4ae57f3645369e2af6d3cedf2fb, type: 3}
   hexagonWhite: {fileID: 21300000, guid: 3c175f980b0f341d893daec5a9b74994, type: 3}
@@ -94,6 +93,8 @@ MonoBehaviour:
     x: 0
     y: 0
     z: 0
+  weight: 0
+  owner: {fileID: 0}
 --- !u!212 &212904600421357358
 SpriteRenderer:
   m_ObjectHideFlags: 1

@@ -8,6 +8,11 @@ using UnityEngine;
 public class HexCoordinates : ICoordinates {
 	[SerializeField]
 	private int x, y, z;
+	public enum MapType {
+		Square,
+		Hexagon,
+		Diamond
+	}
 
 	public int X {
 		get {
@@ -40,13 +45,43 @@ public class HexCoordinates : ICoordinates {
 		return x ^ y;
 	}
 
-	public static HexCoordinates transformOffsetToCube(int x, int y) {
-		return new HexCoordinates (x - y / 2, y);
+	public static HexCoordinates transformOffsetToCube(int x, int y, MapType mapType) {
+		switch (mapType) {
+		case MapType.Square:
+			return new HexCoordinates (x - y / 2, y);
+			break;
+		default:
+			return new HexCoordinates (x, y);
+			break;
+		}
 	}
 
-	public static int transformCubeToOffsetIndex(int x, int y, int widthOfGrid) {
-		x = x + y / 2;
-		if (x < 0 || x >= widthOfGrid || y < 0 || y >= widthOfGrid) return -1; // Illegal coordinates
+	public static bool isValid(int x, int y, int widthOfGrid, MapType mapType) {
+		if (x < 0 || x >= widthOfGrid || y < 0 || y >= widthOfGrid) 
+			return false;
+		switch (mapType) {
+		case MapType.Hexagon:
+			if ((y < widthOfGrid / 2 && x < widthOfGrid / 2 - y) || (y > widthOfGrid / 2 && x > 3 * widthOfGrid / 2 - y - 1))
+				return false;
+			break;
+		default:
+			break;
+		}
+
+		return true;
+	}
+
+	public static int transformCubeToOffsetIndex(int x, int y, int widthOfGrid, MapType mapType) {
+		switch (mapType) {
+		case MapType.Square:
+			x = x + y / 2;
+			break;
+		default: // Hex & Diamond stay the original coordinates
+			break;
+		}
+
+		if (!isValid(x, y, widthOfGrid, mapType)) 
+			return -1; // Illegal coordinates
 		return (y * widthOfGrid + x);
 	}
 

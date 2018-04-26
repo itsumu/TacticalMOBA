@@ -44,6 +44,12 @@ TagManager:
   - name: Base
     uniqueID: 2820916967
     locked: 0
+  - name: AvatarCharacter
+    uniqueID: 665927829
+    locked: 0
   - name: Character
     uniqueID: 2421117845
+    locked: 0
+  - name: UI
+    uniqueID: 2299936521
     locked: 0

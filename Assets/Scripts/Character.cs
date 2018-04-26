@@ -7,37 +7,58 @@ using UnityEngine.UI;
 public class Character : MonoBehaviour {
 	public HexCoordinates coordinates;
 	public HexGrid grid;
+	public AvatarCharacter avatarPrefab;
+	public AvatarCharacter avatar;
+	public Character originalCharacter;
 	public int movingRangeWidth;
 	public bool isReadyToMove;
+	public bool isReadyToAttack;
 	public int healthPoint;
 	public int attackDamage;
 	public int actionPoint;
 	public double attackWidth;
 	public string characterName;
 	public bool moveable;
+	public Dictionary<string, Action> availableActions;
+	public Action currentAction;
 	public GameObject mainCanvas;
 	public Text textName;
 	public Text textHP;
+	public bool isSelected;
 
-	public void Initialize(int cubeX, int cubeY, HexGrid grid, string name) {
+	public void Initialize(int cubeX, int cubeY, HexGrid grid, string name,
+		GameObject mainCanvas,Text textName,Text textHP) {
 		this.coordinates = new HexCoordinates (cubeX, cubeY);
 		this.grid = grid;
-		this.grid.SelectCell += switchMotion; // Bind event
-		ownTheCell (this.grid.getCellByCubeCoordinates (cubeX, cubeY));
+		this.grid.SelectCell += OnCellSelected; // Bind event
+		ownTheCell (getCurrentCell ());
 		this.moveToCoordinate (this.coordinates.X, this.coordinates.Y);
 		this.movingRangeWidth = 2; // Default moving range
 		this.isReadyToMove = false;
+		this.isReadyToAttack = false;
 		this.healthPoint = 5;
 		this.actionPoint = 3;
 		this.attackWidth = 1;
 		this.attackDamage = 1;
 		this.characterName = name;
 		this.moveable = true;
+		this.isSelected = false;
+		this.availableActions = new Dictionary<string, Action> ();
+		this.availableActions.Add ("移动", new Movement());
+		this.availableActions.Add("普攻", new InteractiveSkill ());
+
+		this.originalCharacter = this;
+		if (this.avatarPrefab != null) {
+			this.avatar = Instantiate (this.avatarPrefab, this.grid.transform, false);
+		}
+		if (this.avatar != null) {
+			this.avatar.Initialize (cubeX, cubeY, grid, name, this, mainCanvas, textName, textHP);
+		}
 	}
 
 	// Cube coordinate
 	public void moveToCoordinate(int x, int y) {
-		this.transform.position = this.grid.getCellByCubeCoordinates (x, y).transform.position;
+		this.transform.position = getCurrentCell ().transform.position;
 		this.coordinates = new HexCoordinates (x, y);
 	}
 
@@ -59,33 +80,13 @@ public class Character : MonoBehaviour {
 		this.mainCanvas.SetActive (false);
 	}
 
-	void switchMotion(object sender, HexGrid.SelectCellEventArgs e) {
-		if (!moveable)
-			return;
-		if (e.cell.coordinates.Equals (this.coordinates)) { // The character is right on the cell
+	void OnCellSelected(object sender, HexGrid.SelectCellEventArgs e) {
+		if (e.cell.coordinates.Equals (this.coordinates) && !(this is AvatarCharacter)) { // The character is right on the cell
 			if (e.cell.state == HexCell.CellState.StateSelected) { // Cell is selected, change to state of being selected
-				this.isReadyToMove = true;
-				this.grid.disableCellWithOwner ();
-				this.grid.showMoveRange (this.movingRangeWidth); // Show ranges
 				displayUIState ();
-			} else { // Cell is unselected, cancel state of being selected
-				this.isReadyToMove = false;
-				this.grid.hideMoveRange (this.movingRangeWidth); // Unshow ranges
-				this.grid.enableCellWithOwner ();
-				e.cell.enableCell ();
+			} else { // Cell is unselected, hide UI of state
 				hideUIState ();
 			}
-		} else if (this.isReadyToMove) { // Character not on this cell, but is ready to move here
-			dropTheCell (this.grid.getCellByCubeCoordinates (this.coordinates.X, this.coordinates.Y));
-			moveToCoordinate (e.cell.coordinates.X, e.cell.coordinates.Y); // Move to new coordinate
-			ownTheCell (e.cell);
-			this.grid.enableCellWithOwner ();
-			this.grid.hideMoveRange (this.movingRangeWidth); // Unshow ranges
-			hideUIState ();
-			this.isReadyToMove = false;
-			e.cell.changeState (HexCell.CellState.StateDefault);
-			e.cell.disableCell ();
-			this.moveable = false; // Stay standby until game controller alert next turn
 		}
 	}
 
@@ -97,5 +98,9 @@ public class Character : MonoBehaviour {
 		if (this.coordinates.getManhattanDistance (enemyCoordinates) <= this.attackWidth)
 			return true;
 		return false;
+	}
+
+	public HexCell getCurrentCell() {
+		return this.grid.getCellByCubeCoordinates (this.coordinates.X, this.coordinates.Y);
 	}
 }
