@@ -11,14 +11,17 @@ public class HexCell : MonoBehaviour {
 		StateSelected, // Different from pressed
 		StateMoveRange,
 		StatePath,
+		StateEffectRange,
 		StateDefault
 	}
 	public CellState state;
+	public CellState lastState;
 	public Sprite hexagonCyan;
 	public Sprite hexagonWhite;
 	public Sprite hexagonRed;
 	public Sprite hexagonGrey;
 	public Sprite hexagonGreen;
+	public Sprite hexagonOrange;
 	public HexCoordinates coordinates; // Cube coordinates
 	public event EventHandler SelectCell;
 	public event EventHandler HoverOnCell;
@@ -29,6 +32,7 @@ public class HexCell : MonoBehaviour {
 	public void Initiate() {
 		// Set up states
 		this.state = CellState.StateDefault;
+		this.lastState = CellState.StateDefault;
 		this.weight = 1;
 		this.owner = null;
 	}
@@ -38,7 +42,31 @@ public class HexCell : MonoBehaviour {
 		this.spriteRenderer = GetComponent<SpriteRenderer> ();
 	}
 
+	public void recoverTextureByState() {
+		switch (this.state) {
+		case CellState.StateSelected:
+			this.spriteRenderer.sprite = this.hexagonCyan;
+			break;
+		case CellState.StateMoveRange:
+			this.spriteRenderer.sprite = this.hexagonGreen;
+			break;
+		case CellState.StatePath:
+			this.spriteRenderer.sprite = this.hexagonCyan;
+			break;
+		case CellState.StateEffectRange:
+			this.spriteRenderer.sprite = this.hexagonOrange;
+			break;
+		default:
+			this.spriteRenderer.sprite = this.hexagonWhite;
+			break;
+		}
+	}
+
 	public void changeState(CellState state) {
+		if (this.state == state) // State not change, return
+			return;
+		
+		this.lastState = this.state;
 		switch (state) {
 		case CellState.StateSelected:
 			this.spriteRenderer.sprite = this.hexagonCyan;
@@ -49,6 +77,9 @@ public class HexCell : MonoBehaviour {
 			break;
 		case CellState.StatePath:
 			this.spriteRenderer.sprite = this.hexagonCyan;
+			break;
+		case CellState.StateEffectRange:
+			this.spriteRenderer.sprite = this.hexagonOrange;
 			break;
 		default:
 			this.spriteRenderer.sprite = this.hexagonWhite;
@@ -80,7 +111,7 @@ public class HexCell : MonoBehaviour {
 	}
 
 	void OnMouseExit() {
-		this.changeState (this.state); // Return to original sprite
+		recoverTextureByState ();
 		if (HoverOffCell != null)
 			HoverOffCell (this, EventArgs.Empty);
 	}

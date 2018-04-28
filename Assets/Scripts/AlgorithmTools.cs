@@ -16,6 +16,7 @@ public class PriorityQueue<T> {
 	private List<Tuple<T, double>> elements = new List<Tuple<T, double>>();
 
 	public int getCount() {
+		
 		return elements.Count;
 	}
 

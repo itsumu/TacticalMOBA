@@ -12,7 +12,9 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 	public readonly int height = 9;
 	public int moveRangeWidth = 0;
 	public HexCell cellPrefab;
-	public event EventHandler<SelectCellEventArgs> SelectCell;
+	public event EventHandler<CellEventArgs> SelectCell;
+	public event EventHandler<CellEventArgs> HoverOnCell;
+	public event EventHandler<CellEventArgs> HoverOffCell;
 	public static readonly HexCoordinates[] directions = new HexCoordinates[] { // Anticlockwise from left bottom
 		new HexCoordinates(0, -1),
 		new HexCoordinates(1, -1),
@@ -104,7 +106,7 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 		return this.cells [offsetIndex];
 	}
 
-	void drawPath(HexCoordinates start, HexCoordinates goal, HexCell.CellState cellState) {
+	public void drawPath(HexCoordinates start, HexCoordinates goal, HexCell.CellState cellState) {
 		AStarSearch pathSearcher = new AStarSearch (this, start, goal);
 		HexCoordinates node = pathSearcher.cameFrom [goal] as HexCoordinates;
 
@@ -123,7 +125,7 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 	public void hideRangeFromSelectedCell(int rangeWidth) {
 		switchRangeState (rangeWidth, HexCell.CellState.StateDefault, this.cellSelected.coordinates);
 	}
-
+		
 	public List<HexCell> getCircleRange(HexCoordinates centerCoordinates, int rangeWidth) {
 		List<HexCell> cells = new List<HexCell> ();
 		for (int x = centerCoordinates.X - rangeWidth; x <= centerCoordinates.X + rangeWidth; x++) {
@@ -139,7 +141,8 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 		return cells;
 	}
 
-	void switchRangeState(int rangeWidth, HexCell.CellState cellState, HexCoordinates centerCoordinates) {
+	public void switchRangeState(int rangeWidth, HexCell.CellState cellState, 
+		HexCoordinates centerCoordinates) {
 		// Set up range of moving state
 		var cells = getCircleRange (centerCoordinates, rangeWidth);
 		foreach (var cell in cells) {
@@ -147,16 +150,29 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 				if (cell == this.cellSelected && cellState == HexCell.CellState.StateMoveRange) {
 					continue; // Selected cell shouldn't be set to move range state
 				}
-				if (cell.owner == null) { // Check cell's owner
-					cell.changeState (cellState);
-					if (cellState == HexCell.CellState.StateDefault) { // Hide ranges, disable them
-						cell.disableCell ();
-					}
+				cell.changeState (cellState);
+				if (cellState == HexCell.CellState.StateDefault && 
+					cell.owner == null) { // Hide ranges, disable them
+					cell.disableCell ();
 				}
 			}
 		}
 
 		// todo: Set up range of attacking
+	}
+
+	public void recoverRangeState(int rangeWidth, HexCoordinates centerCoordinates) {
+		var cells = getCircleRange (centerCoordinates, rangeWidth);
+		foreach (var cell in cells) {
+			if (cell != null) {
+				if (cell.owner == null) { // Check cell's owner
+					cell.changeState (cell.lastState);
+					if (cell.state == HexCell.CellState.StateDefault) { // Hide ranges, disable them
+						cell.disableCell ();
+					}
+				}
+			}
+		}
 	}
 
 	List<HexCell> findCellsWithOwner() {
@@ -189,14 +205,13 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 
 	// Events
 
-	// Show range of moveable cells and tell player to move or not
 	void OnSelectCell(object sender, EventArgs e) {
 		HexCell cell = sender as HexCell;
 		if (cell.state == HexCell.CellState.StateSelected) {
 			this.cellSelected = cell; // Record selected cell
 		}
 		if (SelectCell != null) {
-			SelectCellEventArgs eventArgs = new SelectCellEventArgs (cell);
+			CellEventArgs eventArgs = new CellEventArgs (cell);
 			SelectCell (this, eventArgs);
 		}
 		if (cell.state != HexCell.CellState.StateSelected) { // No longer selected, set it to null
@@ -209,7 +224,7 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 
 		if (cellSelected != null && !cell.getDisabled ()
 			&& !cellSelected.coordinates.Equals (cell.coordinates)) { // Hover for path showing
-			drawPath (cellSelected.coordinates, cell.coordinates, HexCell.CellState.StatePath);
+			HoverOnCell (this, new CellEventArgs (cell));
 		}
 	}
 
@@ -218,13 +233,13 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 
 		if (cellSelected != null && !cell.getDisabled ()
 			&& !cellSelected.coordinates.Equals (cell.coordinates)) { // Unhover for path unshowing
-			drawPath (cellSelected.coordinates, cell.coordinates, HexCell.CellState.StateMoveRange);
+			HoverOffCell (this, new CellEventArgs (cell));
 		}
 	}
 
-	public class SelectCellEventArgs: EventArgs {
+	public class CellEventArgs: EventArgs {
 		public HexCell cell;
-		public SelectCellEventArgs(HexCell cell) {
+		public CellEventArgs(HexCell cell) {
 			this.cell = cell;
 		}
 	}

@@ -14,12 +14,15 @@ public class GameController : MonoBehaviour {
 	public Text textName;
 	public Text textHP;
 	public GameObject canvasGameState;
+	public Text textGameState;
 	public Transform dynamicCanvas;
 	public Button buttonActionPrefab;
 	public Camera mainCamera;
 	public string[] buttonActionsLabels;
 	public List<Button> buttonActions;
 	public Character characterSelected;
+	public ActionExecutor actionCalculator;
+	public bool isExecutingActions;
 
 	void Awake() {
 		this.buttonActionsLabels = new string[] {
@@ -30,6 +33,8 @@ public class GameController : MonoBehaviour {
 			"后跳",
 			"射击"
 		};
+		this.actionCalculator = new ActionExecutor ();
+		this.isExecutingActions = false;
 	}
 
 	// Use this for initialization
@@ -39,10 +44,8 @@ public class GameController : MonoBehaviour {
 
 	// Update is called once per frame
 	void Update () {
-		if (turnIsOver ()) {
-			settleTurn ();
-			readyForNewTurn (); // Set off turn is over
-			StartCoroutine (startNewTurn ());
+		if (checkTurnIsOver ()) {
+			StartCoroutine(settleTurn ());
 		}
 	}
 		
@@ -62,50 +65,42 @@ public class GameController : MonoBehaviour {
 		Instantiate (redBasePrefab, redCell.transform.position, Quaternion.identity, this.grid.transform);
 	}
 
-	bool turnIsOver() {
+	bool checkTurnIsOver() {
 		foreach (var character in this.characters) {
-			if (character.moveable) return false;
+			if (character.moveable || this.isExecutingActions) return false;
 		}
 		return true;
 	}
 
 	// Calculate attack damage or other affects that characters create
-	void settleTurn() {
-		// Attack damage calculations
-		for (int i = 0; i < this.characters.Count; i++) {
-			for (int j = 0; j < this.characters.Count; j++) {
-				if (i == j)
-					continue;
-				if (this.characters[i].ableToAttack (this.characters[j].coordinates)) {
-					this.characters [i].attack (this.characters [j]);
-				}
-			}
+	IEnumerator settleTurn() {
+		this.isExecutingActions = true;
+		for (int i = 0; this.actionCalculator.executeActionsByPhase (i); i++) {
+			this.textGameState.text = "Phase " + (i + 1);
+			this.canvasGameState.SetActive (true);
+			yield return new WaitForSeconds (2);
 		}
-	}
-
-	void readyForNewTurn() {
-		// Enable characters
-		foreach (var character in this.characters) {
-			character.moveable = true;
-			character.avatar.moveable = true;
-		}
-	}
-
-	IEnumerator startNewTurn() {
-		// Show 
-		this.canvasGameState.SetActive (true);
-		yield return new WaitForSeconds (2);
 		this.canvasGameState.SetActive (false);
-		// Enables cells
+		startNewTurn ();
+		this.isExecutingActions = false;
+	}
+
+	void startNewTurn() {
+		// Enables cells & characters
 		foreach (var character in this.characters) {
 			HexCell cell = character.getCurrentCell ();
 			cell.enableCell ();
+			character.moveable = true;
+			character.avatar.moveable = true;
+			character.actionPoint = 3;
+
 		}
 	}
 
 	Character createCharacter(int cubeX, int cubeY, string name) {
 		Character character = Instantiate (characterPrefab, grid.transform, false);
-		character.Initialize (cubeX, cubeY, this.grid, name, canvasCharacterInfo, textName, textHP);
+		character.Initialize (cubeX, cubeY, this.grid, name, canvasCharacterInfo, textName, textHP,
+			this.actionCalculator);
 		character.mainCanvas = this.canvasCharacterInfo;
 		character.textName = this.textName;
 		character.textHP = this.textHP;
@@ -138,7 +133,7 @@ public class GameController : MonoBehaviour {
 
 	void OnTriggerClickButtonAction(object sender, EventArgs args) { // The sender is button (parent of exact sender)
 		// Assign avatar character to take action
-		(this.characterSelected as AvatarCharacter).takeAction ((sender as Button).GetComponentInChildren<Text> ().text);
+		(this.characterSelected as AvatarCharacter).receiveAction ((sender as Button).GetComponentInChildren<Text> ().text);
 
 		// Destroy buttons
 		foreach (var button in this.buttonActions) {

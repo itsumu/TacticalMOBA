@@ -247,6 +247,7 @@ MonoBehaviour:
   textName: {fileID: 1352018360}
   textHP: {fileID: 1559981015}
   canvasGameState: {fileID: 754657136}
+  textGameState: {fileID: 1186310239}
   dynamicCanvas: {fileID: 1484707406}
   buttonActionPrefab: {fileID: 114108733718153362, guid: 3b42e8a43ef284e75b212cbe72bbe277,
     type: 2}
@@ -254,6 +255,7 @@ MonoBehaviour:
   buttonActionsLabels: []
   buttonActions: []
   characterSelected: {fileID: 0}
+  isExecutingActions: 0
 --- !u!4 &45119001
 Transform:
   m_ObjectHideFlags: 0
@@ -399,6 +401,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mapType: 0
+  transformOffset: {x: 0, y: 0, z: 0}
   cellSelected: {fileID: 0}
   moveRangeWidth: 0
   cellPrefab: {fileID: 114590357992248300, guid: ccb5948a284ac4f118b24faccc73c878,
@@ -521,7 +524,7 @@ GameObject:
   - component: {fileID: 1186310240}
   - component: {fileID: 1186310239}
   m_Layer: 5
-  m_Name: NextTurn
+  m_Name: GameState
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

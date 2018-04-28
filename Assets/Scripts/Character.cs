@@ -25,9 +25,10 @@ public class Character : MonoBehaviour {
 	public Text textName;
 	public Text textHP;
 	public bool isSelected;
+	public ActionExecutor actionExecutor;
 
 	public void Initialize(int cubeX, int cubeY, HexGrid grid, string name,
-		GameObject mainCanvas,Text textName,Text textHP) {
+		GameObject mainCanvas,Text textName,Text textHP, ActionExecutor actionExecutor) {
 		this.coordinates = new HexCoordinates (cubeX, cubeY);
 		this.grid = grid;
 		this.grid.SelectCell += OnCellSelected; // Bind event
@@ -45,14 +46,16 @@ public class Character : MonoBehaviour {
 		this.isSelected = false;
 		this.availableActions = new Dictionary<string, Action> ();
 		this.availableActions.Add ("移动", new Movement());
-		this.availableActions.Add("普攻", new InteractiveSkill ());
+		this.availableActions.Add("射击", new InteractiveSkill ());
+		this.actionExecutor = actionExecutor;
 
 		this.originalCharacter = this;
 		if (this.avatarPrefab != null) {
 			this.avatar = Instantiate (this.avatarPrefab, this.grid.transform, false);
 		}
 		if (this.avatar != null) {
-			this.avatar.Initialize (cubeX, cubeY, grid, name, this, mainCanvas, textName, textHP);
+			this.avatar.Initialize (cubeX, cubeY, grid, name, this, mainCanvas, textName, 
+				textHP, actionExecutor);
 		}
 	}
 
@@ -80,7 +83,7 @@ public class Character : MonoBehaviour {
 		this.mainCanvas.SetActive (false);
 	}
 
-	void OnCellSelected(object sender, HexGrid.SelectCellEventArgs e) {
+	void OnCellSelected(object sender, HexGrid.CellEventArgs e) {
 		if (e.cell.coordinates.Equals (this.coordinates) && !(this is AvatarCharacter)) { // The character is right on the cell
 			if (e.cell.state == HexCell.CellState.StateSelected) { // Cell is selected, change to state of being selected
 				displayUIState ();

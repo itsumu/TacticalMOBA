@@ -84,11 +84,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   state: 0
+  lastState: 0
   hexagonCyan: {fileID: 21300000, guid: 2a06d4ae57f3645369e2af6d3cedf2fb, type: 3}
   hexagonWhite: {fileID: 21300000, guid: 3c175f980b0f341d893daec5a9b74994, type: 3}
   hexagonRed: {fileID: 21300000, guid: a6103c2747015417f82d6a5d51155e56, type: 3}
   hexagonGrey: {fileID: 21300000, guid: d51809863118340d7941c91bd82b03ae, type: 3}
   hexagonGreen: {fileID: 21300000, guid: ecd4c7bf394d741ce80be6fa99f8018f, type: 3}
+  hexagonOrange: {fileID: 21300000, guid: b52084aaee3f549ae868a2ae7642fabb, type: 3}
   coordinates:
     x: 0
     y: 0
