@@ -44,7 +44,7 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 
 		// Instantiate cells on scene
 		HexCell cell = cells [index] = Instantiate (cellPrefab, this.transform, false);
-		cell.Initiate ();
+		cell.Initialize ();
 		cell.transform.localPosition = position;
 
 		// Calculate cube coordinate from offset coordinate;
@@ -146,7 +146,7 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 		// Set up range of moving state
 		var cells = getCircleRange (centerCoordinates, rangeWidth);
 		foreach (var cell in cells) {
-			if (cell != null) {
+			if (cell != null && cell.state != HexCell.CellState.StateBlocked) {
 				if (cell == this.cellSelected && cellState == HexCell.CellState.StateMoveRange) {
 					continue; // Selected cell shouldn't be set to move range state
 				}
@@ -165,8 +165,8 @@ public class HexGrid : MonoBehaviour, IWeightedGraph<ICoordinates> {
 		var cells = getCircleRange (centerCoordinates, rangeWidth);
 		foreach (var cell in cells) {
 			if (cell != null) {
+				cell.changeState (cell.lastState);
 				if (cell.owner == null) { // Check cell's owner
-					cell.changeState (cell.lastState);
 					if (cell.state == HexCell.CellState.StateDefault) { // Hide ranges, disable them
 						cell.disableCell ();
 					}

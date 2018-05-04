@@ -10,6 +10,7 @@ public class GameController : MonoBehaviour {
 	public Character characterPrefab;
 	public Base blueBasePrefab;
 	public Base redBasePrefab;
+	public GameObject treePrefab;
 	public GameObject canvasCharacterInfo;
 	public Text textName;
 	public Text textHP;
@@ -49,9 +50,11 @@ public class GameController : MonoBehaviour {
 		}
 	}
 		
-	// Set up characters & bases
+	// Set up items over grid
 	void initializeScene() {
 		createCharacters ();
+		createBases ();
+		createBarriers ();
 	}
 
 	void createCharacters() {
@@ -59,10 +62,27 @@ public class GameController : MonoBehaviour {
 		var redCell = this.grid.getCellByCubeCoordinates (this.grid.width - 1, this.grid.height / 2);
 		blueCell.enableCell();
 		createCharacter (blueCell.coordinates.X, blueCell.coordinates.Y, "Link");
-		Instantiate (blueBasePrefab, blueCell.transform.position, Quaternion.identity, this.grid.transform);
 		redCell.enableCell ();
 		createCharacter (redCell.coordinates.X, redCell.coordinates.Y, "Ganon");
+	}
+
+	void createBases() {
+		var blueCell = this.grid.getCellByCubeCoordinates (0, this.grid.height / 2);
+		var redCell = this.grid.getCellByCubeCoordinates (this.grid.width - 1, this.grid.height / 2);
+		blueCell.enableCell();
+		Instantiate (blueBasePrefab, blueCell.transform.position, Quaternion.identity, this.grid.transform);
+		redCell.enableCell ();
 		Instantiate (redBasePrefab, redCell.transform.position, Quaternion.identity, this.grid.transform);
+	}
+
+	void createBarriers() {
+		HexCell[] cells = this.grid.getCells ();
+		int randomIndex = UnityEngine.Random.Range (1, cells.Length - 1);
+		while (!cells [randomIndex].isActiveAndEnabled) {
+			randomIndex = UnityEngine.Random.Range (1, cells.Length - 1);
+		}
+		Instantiate (treePrefab, cells [randomIndex].transform.position, Quaternion.identity, this.grid.transform);
+		cells [randomIndex].blockCell ();
 	}
 
 	bool checkTurnIsOver() {

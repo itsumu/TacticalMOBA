@@ -12,6 +12,7 @@ public class HexCell : MonoBehaviour {
 		StateMoveRange,
 		StatePath,
 		StateEffectRange,
+		StateBlocked,
 		StateDefault
 	}
 	public CellState state;
@@ -29,7 +30,7 @@ public class HexCell : MonoBehaviour {
 	public double weight;
 	public Character owner;
 
-	public void Initiate() {
+	public void Initialize() {
 		// Set up states
 		this.state = CellState.StateDefault;
 		this.lastState = CellState.StateDefault;
@@ -37,9 +38,12 @@ public class HexCell : MonoBehaviour {
 		this.owner = null;
 	}
 
+	void Awake() {
+		this.spriteRenderer = GetComponent<SpriteRenderer> ();
+	}
+
 	// Use this for initialization
 	void Start () {
-		this.spriteRenderer = GetComponent<SpriteRenderer> ();
 	}
 
 	public void recoverTextureByState() {
@@ -94,6 +98,12 @@ public class HexCell : MonoBehaviour {
 
 	public void disableCell() {
 		this.disabled = true;
+	}
+
+	public void blockCell() {
+		this.weight += double.MaxValue;
+		this.changeState (CellState.StateBlocked);
+		disableCell ();
 	}
 
 	public bool getDisabled() {
